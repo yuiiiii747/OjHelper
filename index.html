@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Carol — OJ & 程序设计 AI 学习助手</title>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg-page:#F9F0ED;--bg-surface:#fff;--bg-inset:#f3eae6;--bg-hover:#efe6e2;--border:#e4d9d4;--border-light:#eee5e0;--text-primary:#2e2826;--text-secondary:#6b625e;--text-muted:#a89e98;--green:#567357;--green-light:#eef3ee;--green-mid:#8da88e;--green-glow:rgba(86,115,87,0.12);--rose:#E58889;--rose-light:#f7edec;--rose-glow:rgba(229,136,137,0.12);--radius:10px;--radius-sm:7px;--radius-xs:5px;font-size:14.5px}
+html{scroll-behavior:smooth}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hiragino Sans GB','Microsoft YaHei',Helvetica,Arial,sans-serif;background:var(--bg-page);color:var(--text-primary);line-height:1.6;min-height:100vh;-webkit-font-smoothing:antialiased}
+#app{min-height:100vh;display:flex;flex-direction:column}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+h1,h2,h3,h4{font-weight:600;color:var(--text-primary)}
+h1{font-size:1.5rem}h2{font-size:1.15rem}h3{font-size:.95rem}
+button{cursor:pointer;font-family:inherit;border:none;outline:none;font-size:.88rem;transition:all .2s}
+input,textarea,select{font-family:inherit;font-size:.88rem;background:var(--bg-surface);color:var(--text-primary);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:.5rem .8rem;outline:none;transition:border-color .2s,box-shadow .2s;width:100%}
+input:focus,textarea:focus,select:focus{border-color:var(--green);box-shadow:0 0 0 2px var(--green-glow)}
+textarea{resize:vertical;min-height:80px}
+::selection{background:var(--green-glow);color:var(--text-primary)}
+
+/* ===== Header ===== */
+.app-header{position:sticky;top:0;z-index:100;background:var(--bg-surface);border-bottom:1px solid var(--border-light)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;max-width:1200px;margin:0 auto;padding:.55rem 1rem}
+.logo{display:flex;align-items:center;gap:.45rem;font-size:1rem}
+.logo-text{font-weight:700;color:var(--green)}
+.logo-sub{font-size:.7rem;color:var(--text-muted);font-weight:400;margin-left:.1rem}
+.btn-api{display:flex;align-items:center;gap:.3rem;padding:.35rem .65rem;background:transparent;color:var(--text-muted);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:.75rem}
+.btn-api:hover{background:var(--bg-hover);color:var(--text-secondary)}
+.btn-api.on{background:var(--green-light);color:var(--green);border-color:var(--green)}
+.api-wrap{border-bottom:1px solid var(--border-light);background:var(--bg-surface)}
+
+/* ===== Body ===== */
+.app-body{display:flex;flex:1;max-width:1200px;margin:0 auto;padding:1rem;gap:1rem;width:100%;align-items:flex-start}
+.side-left{width:220px;flex-shrink:0;position:sticky;top:62px}
+.side-right{width:80px;flex-shrink:0;position:sticky;top:62px}
+.app-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:.7rem}
+
+/* ===== Surface ===== */
+.surface{background:var(--bg-surface);border:1px solid var(--border-light);border-radius:var(--radius);padding:1rem}
+
+/* ===== Buttons ===== */
+.btn-p{background:var(--green);color:#fff;padding:.55rem 1.4rem;border-radius:var(--radius-sm);font-weight:600}
+.btn-p:hover{background:#4a654a}
+.btn-p:active{opacity:.9}
+.btn-p.rose{background:var(--rose)}
+.btn-p.rose:hover{background:#d47778}
+.btn-s{background:var(--bg-surface);color:var(--text-secondary);padding:.55rem 1.1rem;border-radius:var(--radius-sm);border:1px solid var(--border)}
+.btn-s:hover{background:var(--bg-hover)}
+.btn-g{background:transparent;color:var(--text-muted);padding:.3rem .6rem;border-radius:var(--radius-xs)}
+.btn-g:hover{background:var(--bg-hover);color:var(--text-secondary)}
+
+/* ===== Badge ===== */
+.bdg{display:inline-flex;align-items:center;padding:.18rem .55rem;border-radius:4px;font-size:.7rem;font-weight:600;letter-spacing:.01em}
+.bdg-g{background:var(--green-light);color:var(--green)}
+.bdg-r{background:var(--rose-light);color:#c96a6b}
+.bdg-w{background:rgba(201,168,76,0.12);color:#c9a84c}
+.bdg-d{background:rgba(212,106,107,0.12);color:#d46a6b}
+
+/* ===== History Panel ===== */
+.hp{display:flex;flex-direction:column;gap:.45rem;max-height:calc(100vh - 90px);overflow-y:auto}
+.hp-head{display:flex;align-items:center;justify-content:space-between}
+.hp-title{font-size:.78rem;color:var(--text-secondary);font-weight:600}
+.hp-clr{font-size:.68rem;padding:.12rem .4rem;background:transparent;color:var(--text-muted);border:1px solid var(--border);border-radius:4px}
+.hp-clr:hover{color:var(--text-secondary);background:var(--bg-hover)}
+.hp-clr.ok{color:var(--danger);border-color:var(--danger);background:rgba(212,106,107,.08)}
+.hp-list{display:flex;flex-direction:column;gap:.25rem}
+.hp-item{display:flex;flex-direction:column;gap:.12rem;padding:.4rem .5rem;background:transparent;border:1px solid transparent;border-radius:var(--radius-sm);text-align:left;cursor:pointer;transition:background .15s,border-color .15s}
+.hp-item:hover{background:var(--bg-hover);border-color:var(--border-light)}
+.hp-h{display:flex;align-items:center;justify-content:space-between;gap:.3rem}
+.hp-bdg{font-size:.6rem;font-weight:600;padding:.04rem .3rem;border-radius:3px}
+.hp-bdg.hp-g{background:var(--green-light);color:var(--green)}
+.hp-bdg.hp-r{background:var(--rose-light);color:#c96a6b}
+.hp-time{font-size:.6rem;color:var(--text-muted);flex-shrink:0}
+.hp-pv{font-size:.7rem;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hp-rs{font-size:.63rem;color:var(--green-mid)}
+.hp-em{display:flex;flex-direction:column;align-items:center;gap:.3rem;padding:1.2rem 0;color:var(--text-muted)}
+.hp-em p{font-size:.72rem}
+
+/* ===== Mode Tabs (right side) ===== */
+.mt{padding:.35rem;position:sticky;top:62px}
+.mt-tr{position:relative;display:flex;flex-direction:column;gap:.15rem}
+.mt-btn{position:relative;z-index:2;padding:.65rem .4rem;border-radius:var(--radius-sm);background:transparent;color:var(--text-muted);font-size:.8rem;font-weight:600;text-align:center;letter-spacing:.04em;transition:color .2s}
+.mt-btn:hover{color:var(--text-secondary)}
+.mt-btn.on{color:var(--text-primary)}
+.mt-ind{position:absolute;left:.15rem;width:calc(100% - .3rem);height:38px;background:var(--green-light);border-radius:var(--radius-sm);border:1px solid rgba(86,115,87,.15);z-index:1;pointer-events:none;transition:background .3s,border-color .3s}
+.mt-ind.in-r{background:var(--rose-light);border-color:rgba(229,136,137,.2)}
+
+/* ===== Input Panel ===== */
+.ip{display:flex;flex-direction:column;gap:.55rem}
+.ip-lb{font-size:.78rem;font-weight:600;color:var(--text-secondary);margin-bottom:.2rem}
+.dz{border:1.5px dashed var(--border);border-radius:var(--radius-sm);padding:1.1rem;text-align:center;cursor:pointer;transition:background .2s,border-color .2s;background:var(--bg-inset);min-height:90px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.3rem}
+.dz:hover{border-color:var(--green-mid);background:var(--green-light)}
+.dz.drag{border-color:var(--green);background:var(--green-light);border-style:solid}
+.dz.has{border-style:solid;border-color:var(--border);background:transparent}
+.dz-t{color:var(--text-secondary);font-weight:600;font-size:.85rem}
+.dz-st{color:var(--text-muted);font-size:.73rem}
+.img-pv{position:relative;max-width:100%;max-height:260px;overflow:hidden;border-radius:var(--radius-sm)}
+.img-pv img{max-width:100%;max-height:220px;object-fit:contain;display:block;border-radius:var(--radius-sm)}
+.img-rm{position:absolute;top:5px;right:5px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.5);color:#fff;border-radius:50%;border:none;cursor:pointer}
+.img-rm:hover{background:var(--danger)}
+.dz-h{color:var(--text-muted);font-size:.7rem}
+
+/* ===== Mode panels ===== */
+.pn-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:.1rem}
+.pn-hd h3{font-size:.9rem}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:.35rem}
+.g-item{display:flex;gap:.45rem;padding:.5rem .6rem;background:var(--bg-inset);border-radius:var(--radius-sm)}
+.g-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:.3rem}
+.g-dot.g{background:var(--green)}
+.g-dot.r{background:var(--rose)}
+.g-item strong{display:block;font-size:.78rem;margin-bottom:.03rem}
+.g-item p{font-size:.7rem;color:var(--text-muted);line-height:1.4}
+
+/* ===== Form ===== */
+.fg{display:flex;flex-direction:column;gap:.25rem}
+.fl{font-size:.78rem;font-weight:600;color:var(--text-secondary)}
+.eg{display:flex;flex-wrap:wrap;gap:.22rem}
+.eb{padding:.18rem .4rem;background:var(--bg-inset);border:1.5px solid var(--border-light);border-radius:5px;cursor:pointer;transition:all .15s;font-size:.7rem;font-weight:600;color:var(--text-muted)}
+.eb:hover{border-color:var(--green-mid);background:var(--green-light)}
+.eb.on{border-color:var(--green);background:var(--green-light);color:var(--green)}
+.eb.eb-d.on{border-color:var(--danger);background:rgba(212,106,107,.08);color:var(--danger)}
+.eb.eb-w.on{border-color:#c9a84c;background:rgba(201,168,76,.08);color:#c9a84c}
+.ec{font-family:'SF Mono','Fira Code','Consolas',monospace}
+.ci{font-family:'SF Mono','Fira Code','Consolas','Courier New',monospace;font-size:.78rem;line-height:1.5;tab-size:4;padding:.6rem;min-height:120px}
+.or{display:flex;gap:.22rem;flex-wrap:wrap}
+.ob{padding:.28rem .6rem;background:var(--bg-inset);border:1.5px solid var(--border-light);border-radius:5px;cursor:pointer;font-size:.75rem;color:var(--text-secondary);transition:all .15s;font-weight:500}
+.ob:hover{border-color:var(--green-mid);background:var(--green-light)}
+.ob.on{border-color:var(--green);background:var(--green-light);color:var(--green)}
+
+/* ===== Toggle ===== */
+.tg{border:1px solid var(--border-light);border-radius:var(--radius-sm);overflow:hidden;background:var(--bg-inset)}
+.tg-sum{display:flex;align-items:center;justify-content:space-between;padding:.45rem .6rem;cursor:pointer;font-size:.78rem;color:var(--text-secondary);font-weight:500;user-select:none}
+.tg-sum:hover{background:var(--bg-hover)}
+.tg-arw{transition:transform .2s}
+.tg[open] .tg-arw{transform:rotate(180deg)}
+.tg-bd{padding:.35rem .6rem .6rem;border-top:1px solid var(--border-light);display:flex;flex-direction:column;gap:.45rem}
+
+/* ===== Result ===== */
+.rp{display:flex;flex-direction:column;gap:.55rem}
+.wb{display:flex;align-items:center;gap:.35rem;padding:.45rem .65rem;background:var(--green-light);border:1px solid rgba(86,115,87,.2);border-radius:var(--radius-sm);font-size:.75rem;color:var(--text-secondary)}
+.wb strong{color:var(--green)}
+.er{padding:.35rem .6rem;background:var(--rose-light);border:1px solid rgba(229,136,137,.2);border-radius:var(--radius-sm);font-size:.78rem;color:var(--danger)}
+.sr{display:flex;gap:.35rem;align-items:center}
+.sk{display:flex;flex-direction:column;gap:.45rem;padding:.7rem;background:var(--bg-inset);border-radius:var(--radius-sm)}
+.sl{height:11px;border-radius:4px;animation:sh 1.5s ease-in-out infinite;background:linear-gradient(90deg,var(--bg-hover) 25%,var(--bg-surface) 50%,var(--bg-hover) 75%);background-size:200% 100%}
+@keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.w6{width:65%}.w8{width:85%}.w5{width:50%}.w7{width:75%}
+.ra{display:flex;flex-direction:column;gap:.45rem}
+.rh{display:flex;align-items:center;justify-content:space-between}
+.rh h2{font-size:1rem}
+.rs{background:var(--bg-surface);border:1px solid var(--border-light);border-left:3px solid var(--green);border-radius:var(--radius-sm);padding:.6rem .8rem}
+.rt{font-size:.82rem;font-weight:600;margin-bottom:.3rem}
+.rt.g{color:var(--green)}
+.rt.r{color:#c96a6b}
+.rl{font-size:.78rem;color:var(--text-secondary);line-height:1.5;padding:.1rem 0}
+.cb{position:relative;background:#2a2624;border-radius:var(--radius-sm);overflow:hidden;margin-top:.3rem}
+.cb pre{padding:.75rem;overflow-x:auto;font-size:.73rem;line-height:1.5}
+.cb code{font-family:'SF Mono','Fira Code','Consolas','Courier New',monospace;color:#e8e0dc;white-space:pre}
+.cb-cp{position:absolute;top:5px;right:5px;display:flex;align-items:center;gap:.2rem;padding:.18rem .45rem;background:rgba(255,255,255,.08);color:var(--text-muted);border:1px solid rgba(255,255,255,.06);border-radius:4px;font-size:.63rem;cursor:pointer}
+.cb-cp:hover{background:rgba(255,255,255,.15);color:var(--text-secondary)}
+.spn{width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;display:inline-block}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* ===== API Config ===== */
+.ac{padding:.75rem 1.25rem .9rem;max-width:600px;margin:0 auto}
+.ac-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:.65rem}
+.ac-hd h3{display:flex;align-items:center;gap:.3rem;font-size:.9rem}
+.ac-bd{display:flex;flex-direction:column;gap:.55rem}
+.ac-r{display:flex;gap:.6rem}
+.af{display:flex;flex-direction:column;gap:.22rem}
+.af label{font-size:.73rem;color:var(--text-secondary);font-weight:600}
+.f1{flex:1}
+.rg{display:flex;align-items:center;gap:.35rem}
+.rg input[type=range]{flex:1;padding:0;border:none;accent-color:var(--green);box-shadow:none}
+.rg input[type=range]:focus{box-shadow:none}
+.rv{font-size:.8rem;color:var(--text-secondary);min-width:1.3rem;text-align:center}
+.kw{position:relative}
+.ke{position:absolute;right:7px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;padding:3px;display:flex}
+.ke:hover{color:var(--text-secondary)}
+.ac-act{display:flex;align-items:center;gap:.7rem;margin-top:.05rem}
+.ac-note{font-size:.68rem;color:var(--text-muted)}
+
+/* ===== History stats ===== */
+.anal-sec h4{font-size:.73rem;color:var(--text-muted);margin-bottom:.22rem;font-weight:600}
+.stat-r{display:flex;gap:.25rem}
+.stat-i{flex:1;background:var(--bg-surface);border:1px solid var(--border-light);border-radius:var(--radius-xs);padding:.3rem;text-align:center}
+.stat-i strong{display:block;font-size:.9rem;color:var(--text-muted)}
+.stat-i span{font-size:.6rem;color:var(--text-muted)}
+.mb{display:flex;gap:2px;border-radius:var(--radius-xs);overflow:hidden}
+.m-s{flex:1;text-align:center;padding:.25rem .1rem;font-size:.62rem;font-weight:600}
+.m-s.mm{background:var(--green-light);color:var(--green)}
+.m-s.mo{background:rgba(86,115,87,.06);color:var(--green-mid)}
+.m-s.mh{background:var(--rose-light);color:#c96a6b}
+.m-s.mn{background:rgba(212,106,107,.06);color:var(--danger)}
+.ol{list-style:none;display:flex;flex-direction:column;gap:.12rem;padding:0}
+.ol li{font-size:.7rem;color:var(--text-muted);padding-left:.75rem;position:relative}
+.ol li::before{content:'';position:absolute;left:0;top:.38em;width:4px;height:4px;border-radius:50%;background:var(--green)}
+
+/* flow */
+.fw{display:flex;gap:.45rem;align-items:flex-start}
+.fn{flex-shrink:0;width:20px;height:20px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:.65rem;font-weight:700}
+.fw strong{display:block;font-size:.75rem;margin-bottom:.03rem}
+.fw p{font-size:.7rem;color:var(--text-muted)}
+
+/* knowledge */
+.kg{display:flex;flex-direction:column;gap:.22rem}
+.kl{font-size:.62rem;font-weight:600;padding:.04rem .35rem;border-radius:3px;width:fit-content}
+.kl.b{background:var(--green-light);color:var(--green)}
+.kl.a{background:var(--rose-light);color:#c96a6b}
+.kl.h{background:rgba(122,155,181,.12);color:#7a9bb5}
+.kt{display:flex;flex-wrap:wrap;gap:.22rem}
+.kt span{font-size:.68rem;padding:.08rem .4rem;background:var(--bg-surface);border:1px solid var(--border-light);border-radius:4px;color:var(--text-secondary)}
+
+.fade-enter-active,.fade-leave-active{transition:opacity .2s}
+.fade-enter-from,.fade-leave-to{opacity:0}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- Loading -->
+  <div v-if="loading" class="ls" :class="{ on: loading }">
+    <div class="sp"></div>
+    <h1 style="font-size:1.6rem;font-weight:700;color:#567357;margin:0">Carol</h1>
+    <p style="color:#6b625e;margin-top:.3rem;font-size:.85rem">OJ & 程序设计 AI 学习助手</p>
+  </div>
+
+  <template v-if="!loading">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-inner">
+        <h1 class="logo">
+          <svg width="22" height="22" viewBox="0 0 32 32" fill="none"><rect x="2" y="2" width="28" height="28" rx="8" fill="#567357"/><path d="M10 16l4 4 8-8" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="logo-text">Carol</span>
+          <span class="logo-sub">OJ & 程序设计</span>
+        </h1>
+        <button class="btn-api" :class="{ on: showApi }" @click="showApi = !showApi">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          <span>API</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- API Config -->
+    <transition name="fade">
+      <div v-if="showApi" class="api-wrap" style="overflow:hidden">
+        <api-config @close="showApi = false"></api-config>
+      </div>
+    </transition>
+
+    <!-- Body -->
+    <div class="app-body">
+      <aside class="side-left"><history-panel></history-panel></aside>
+      <main class="app-main">
+        <input-panel></input-panel>
+        <explain-panel v-if="store.activeMode === 'explain'"></explain-panel>
+        <debug-panel v-if="store.activeMode === 'debug'"></debug-panel>
+        <review-panel v-if="store.activeMode === 'review'"></review-panel>
+        <result-panel></result-panel>
+      </main>
+      <aside class="side-right"><mode-tabs></mode-tabs></aside>
+    </div>
+  </template>
+</div>
+
+<script>
+const { createApp, ref, reactive, computed, onMounted, onUnmounted, nextTick, toRaw, watch, defineComponent } = Vue;
+
+// ==============================
+// Store
+// ==============================
+const savedApi = JSON.parse(localStorage.getItem('carol_api_config') || 'null');
+const savedHistory = JSON.parse(localStorage.getItem('carol_history') || '[]');
+
+const store = reactive({
+  activeMode: 'explain',
+  apiConfig: { endpoint: savedApi?.endpoint || 'https://api.openai.com/v1', model: savedApi?.model || 'gpt-4o', apiKey: savedApi?.apiKey || '', temperature: savedApi?.temperature ?? 0.7 },
+  inputText: '', uploadedImage: null, uploadedImageUrl: null,
+  debugErrorType: 'WA', userCode: '',
+  reviewScope: 'all', practiceType: 'idea',
+  isProcessing: false, result: null,
+  history: savedHistory,
+
+  setMode(m) { this.activeMode = m; this.result = null },
+  setApiConfig(c) { Object.assign(this.apiConfig, c); localStorage.setItem('carol_api_config', JSON.stringify(this.apiConfig)) },
+  setImage(f) { this.uploadedImage = f; this.uploadedImageUrl = f ? URL.createObjectURL(f) : null },
+  clearInput() { this.inputText = ''; this.uploadedImage = null; this.uploadedImageUrl = null; this.userCode = '' },
+  clearResult() { this.result = null },
+
+  addHistory(entry) {
+    this.history.unshift({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), time: new Date().toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }), mode: this.activeMode, inputPreview: (this.inputText || '(图片)').slice(0, 60), hasImage: !!this.uploadedImage, hasCode: !!this.userCode, resultTitle: entry?.title || '', summary: entry?.sections?.[0]?.title || '', fullResult: entry });
+    if (this.history.length > 50) this.history.pop();
+    localStorage.setItem('carol_history', JSON.stringify(this.history));
+  },
+  loadHistoryItem(item) {
+    this.setMode(item.mode);
+    if (item.fullResult) {
+      this.result = item.fullResult;
+    }
+  },
+  clearHistory() { this.history = []; localStorage.setItem('carol_history', JSON.stringify(this.history)) },
+});
+
+// ==============================
+// Services
+// ==============================
+function isApiReady() { const c = store.apiConfig; return !!(c.apiKey && c.apiKey.startsWith('sk-')) }
+
+async function chatComplete(messages) {
+  const cfg = store.apiConfig;
+  if (!cfg.apiKey) throw new Error('API_KEY_MISSING');
+  const res = await fetch(`${cfg.endpoint.replace(/\/+$/, '')}/chat/completions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cfg.apiKey}` },
+    body: JSON.stringify({ model: cfg.model, messages, temperature: cfg.temperature, stream: false }),
+  });
+  if (!res.ok) {
+    let body = '';
+    try { body = await res.text() } catch {}
+    let msg = `请求失败 (${res.status})`;
+    try { const e = JSON.parse(body); if (e.error?.message) msg = e.error.message } catch { if (body) msg = body }
+    // Check if the error is about image/vision not being supported
+    if (/image_url|image|vision|multimodal/i.test(msg) && /unknown variant|not support|unexpected|expected.*text/i.test(msg)) {
+      throw new Error('IMAGE_NOT_SUPPORTED')
+    }
+    throw new Error(msg)
+  }
+  const d = await res.json();
+  return d.choices?.[0]?.message?.content || '';
+}
+
+function explainSysPrompt() {
+  return `你是一位资深的 ACM/算法竞赛教练。分析用户提供的 OJ 题目并输出以下 Markdown 结构：
+
+# 数据范围分析
+- 原始数据范围
+- 涉及算法下最大可能数据
+
+# 考点分析
+- 真正考点
+- 易混考点
+- 考点关键特征
+- 题目关键词
+
+# 涉及思路
+
+# 可用算法对比
+- 暴力思路
+- 优化思路
+- 最推荐方法
+- 为什么选这个方法
+
+# 易错点总结
+
+# 代码实现
+
+用代码块输出 C++ 实现，注明复杂度。`
+}
+
+function debugSysPrompt() {
+  return `你是一位资深的 ACM/算法竞赛教练。根据用户提供的 OJ 题目、提交状态和代码，输出以下 Markdown 结构：
+
+# 错误结论
+- 表层错误类型
+- 真正错误原因
+
+# 代码想法识别
+- 用户代码大概想用什么方法
+- 是否符合题目考点
+- 是否可能通过数据范围
+
+# 构造反例
+- 反例输入
+- 正确输出
+- 用户代码输出
+- 从哪一步开始偏离
+
+# 修改方案
+- 问题定位
+- 最小修改版（代码块）
+- 推荐写法（代码块）
+- 修改原因
+
+# 错题沉淀`
+}
+
+function reviewSysPrompt() {
+  return `你是一位资深的 ACM/算法竞赛教练。根据用户指定的复习范围和练习形式，输出以下 Markdown 结构：
+
+# 错题统计
+- 错误最多考点
+- 错误最多原因
+- 最近反复错类型
+
+# 错因归类
+列出常见错误类型并分析
+
+# 掌握度判断
+评估各知识点掌握程度
+
+# 复习优先级排序
+
+# 今日复习建议`
+}
+
+function parseResult(md, mode) {
+  if (!md) return null;
+  const lines = md.split('\n');
+  const sections = []; let cur = null; let code = null; let cs = false;
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i];
+    if (l.startsWith('```')) {
+      if (!cs) { cs = true; const cl = []; i++; while (i < lines.length && !lines[i].startsWith('```')) { cl.push(lines[i]); i++ } code = cl.join('\n').trim(); cs = false; continue }
+    }
+    const h = l.match(/^#{1,3}\s+(.+)/);
+    if (h) { if (cur) sections.push(cur); cur = { title: h[1].trim(), content: [] }; continue }
+    if (cur) { const t = l.replace(/^[-*]\s+/, '').trim(); if (t) cur.content.push(t) }
+  }
+  if (cur) sections.push(cur);
+  const tm = { explain: '题目分析结果', debug: '代码纠错报告', review: '复习计划' };
+  return { type: mode, title: tm[mode] || '分析结果', sections, code, raw: md };
+}
+
+// ==============================
+// Components
+// ==============================
+
+// --- History Panel ---
+const HistoryPanel = {
+  template: `<div class="hp surface">
+    <div class="hp-head">
+      <span class="hp-title">历史记录</span>
+      <button v-if="store.history.length" class="hp-clr" :class="{ ok: cf }" @click="doClear">{{ cf ? '确认清空' : '清空' }}</button>
+    </div>
+    <div v-if="store.history.length" class="hp-list">
+      <button v-for="item in store.history" :key="item.id" class="hp-item" @click="store.loadHistoryItem(item)">
+        <div class="hp-h">
+          <span class="hp-bdg" :class="item.mode==='debug'?'hp-r':'hp-g'">{{ {explain:'讲解',debug:'纠错',review:'复习'}[item.mode]||item.mode }}</span>
+          <span class="hp-time">{{ item.time }}</span>
+        </div>
+        <p class="hp-pv">{{ item.inputPreview }}</p>
+        <p v-if="item.resultTitle" class="hp-rs">{{ item.resultTitle }}</p>
+      </button>
+    </div>
+    <div v-else class="hp-em">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a89e98" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <p>暂无记录</p>
+    </div>
+  </div>`,
+  setup() {
+    const cf = ref(false);
+    function doClear() { if (cf.value) { store.clearHistory(); cf.value = false } else { cf.value = true; setTimeout(() => cf.value = false, 3000) } }
+    return { store, cf, doClear }
+  }
+};
+
+// --- Mode Tabs ---
+const ModeTabs = {
+  template: `<div class="mt surface" ref="el">
+    <div class="mt-tr">
+      <button v-for="m in modes" :key="m.key" class="mt-btn" :class="{ on: store.activeMode===m.key }" @click="select(m.key)">{{ m.label }}</button>
+      <div ref="ind" class="mt-ind" :class="{ 'in-r': store.activeMode==='debug' }"></div>
+    </div>
+  </div>`,
+  setup() {
+    const el = ref(null); const ind = ref(null);
+    const modes = [{ key: 'explain', label: '讲解' }, { key: 'debug', label: '纠错' }, { key: 'review', label: '复习' }];
+    function select(k) { if (store.activeMode === k) return; store.setMode(k); move() }
+    function move() {
+      if (!ind.value || !el.value) return;
+      const btn = el.value.querySelector(`.mt-btn:nth-child(${modes.findIndex(m => m.key === store.activeMode) + 1})`);
+      if (!btn) return;
+      gsap.to(ind.value, { y: btn.offsetTop, height: btn.offsetHeight, duration: .35, ease: 'power3.out' })
+    }
+    onMounted(() => { requestAnimationFrame(() => move()) });
+    return { el, ind, modes, store, select }
+  }
+};
+
+// --- Input Panel ---
+const InputPanel = {
+  template: `<div class="ip surface" ref="el">
+    <div class="fg"><label class="fl">题目描述 / 补充信息</label>
+      <textarea v-model="store.inputText" placeholder="粘贴题目描述、输入输出样例..." rows="3" @paste="onPaste"></textarea>
+    </div>
+    <div class="dz" :class="{ drag: dragging, has: !!store.uploadedImageUrl }" @dragover.prevent="dragging=true" @dragleave.prevent="dragging=false" @drop.prevent="onDrop" @click="!store.uploadedImageUrl&&fi.click()">
+      <input ref="fi" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden @change="onFile">
+      <template v-if="store.uploadedImageUrl">
+        <div class="img-pv"><img :src="store.uploadedImageUrl" alt="s"><button class="img-rm" @click.stop="rm"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+        <p class="dz-h">拖拽或点击更换 · Ctrl+V 粘贴</p>
+      </template>
+      <template v-else>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#567357" stroke-width="1.6" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <p class="dz-t">拖拽 OJ 题目截图到此处</p>
+        <p class="dz-st">或点击选择文件 · PNG / JPG / WebP</p>
+      </template>
+    </div>
+  </div>`,
+  setup() {
+    const el = ref(null); const fi = ref(null); const dragging = ref(false);
+    function onDrop(e) { dragging.value = false; const f = e.dataTransfer?.files?.[0]; if (f?.type.startsWith('image/')) store.setImage(f) }
+    function onFile(e) { const f = e.target?.files?.[0]; if (f) store.setImage(f) }
+    function rm() { store.setImage(null); if (fi.value) fi.value.value = '' }
+    function onPaste(e) { const it = e.clipboardData?.items?.[0]; if (it?.type.startsWith('image/')) { const f = it.getAsFile(); if (f) store.setImage(f) } }
+    onMounted(() => { if (el.value) gsap.from(el.value.children, { y: 10, autoAlpha: 0, duration: .35, stagger: .04, ease: 'power2.out' }) });
+    onUnmounted(() => gsap.killTweensOf(el.value?.children));
+    return { el, fi, dragging, store, onDrop, onFile, rm, onPaste }
+  }
+};
+
+// --- Explain Panel ---
+const ExplainPanel = {
+  template: `<div class="surface" ref="el" style="display:flex;flex-direction:column;gap:.6rem">
+    <div class="pn-hd"><h3>讲解模式</h3><span class="bdg bdg-g">AI 分析</span></div>
+    <div class="g2">
+      <div class="g-item"><div class="g-dot g"></div><div><strong>数据范围分析</strong><p>自动识别数据范围，推断复杂度上限</p></div></div>
+      <div class="g-item"><div class="g-dot r"></div><div><strong>考点拆解</strong><p>辨析真正考点与易混考点</p></div></div>
+      <div class="g-item"><div class="g-dot g"></div><div><strong>算法对比</strong><p>暴力到最优解，附 C++ 代码</p></div></div>
+      <div class="g-item"><div class="g-dot r"></div><div><strong>易错点总结</strong><p>常见陷阱与注意事项</p></div></div>
+    </div>
+    <details class="tg">
+      <summary class="tg-sum"><span>ACM 知识体系</span><svg class="tg-arw" width="9" height="9" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 4.5l3 3 3-3"/></svg></summary>
+      <div class="tg-bd">
+        <div class="kg"><span class="kl b">基础</span><div class="kt"><span>并查集</span><span>树状数组</span><span>ST 表</span><span>单调队列</span><span>Trie</span><span>Dijkstra</span><span>KMP</span><span>背包DP</span></div></div>
+        <div class="kg"><span class="kl a">进阶</span><div class="kt"><span>线段树</span><span>平衡树</span><span>树链剖分</span><span>莫队</span><span>AC自动机</span><span>状压DP</span><span>凸包</span></div></div>
+        <div class="kg"><span class="kl h">高阶</span><div class="kt"><span>LCT</span><span>主席树</span><span>网络流</span><span>SAM</span><span>FFT/NTT</span><span>动态DP</span></div></div>
+      </div>
+    </details>
+  </div>`,
+  setup() {
+    const el = ref(null);
+    onMounted(() => { if (el.value) gsap.from(el.value.children, { y: 10, autoAlpha: 0, duration: .35, stagger: .04, ease: 'power2.out' }) });
+    onUnmounted(() => gsap.killTweensOf(el.value?.children));
+    return { el }
+  }
+};
+
+// --- Debug Panel ---
+const DebugPanel = {
+  template: `<div class="surface" ref="el" style="display:flex;flex-direction:column;gap:.6rem">
+    <div class="pn-hd"><h3>纠错模式</h3><span v-if="errInfo" class="bdg" :class="errInfo.bdg">{{ errInfo.label }}</span></div>
+    <div class="fg"><label class="fl">提交状态</label>
+      <div class="eg">
+        <button v-for="et in errorTypes" :key="et.value" class="eb" :class="{ on: store.debugErrorType===et.value, 'eb-d': et.badge==='danger', 'eb-w': et.badge==='warning' }" @click="store.debugErrorType=et.value"><span class="ec">{{ et.value }}</span></button>
+      </div>
+    </div>
+    <div class="fg"><label class="fl">用户代码</label>
+      <textarea v-model="store.userCode" placeholder="粘贴你的代码..." rows="7" class="ci" spellcheck="false"></textarea>
+    </div>
+    <details class="tg">
+      <summary class="tg-sum"><span>AI 诊断流程</span><svg class="tg-arw" width="9" height="9" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 4.5l3 3 3-3"/></svg></summary>
+      <div class="tg-bd">
+        <div class="fw"><span class="fn" style="background:var(--green-light);color:var(--green)">1</span><div><strong>代码想法识别</strong><p>推断方法、考点匹配、复杂度评估</p></div></div>
+        <div class="fw"><span class="fn" style="background:var(--rose-light);color:#c96a6b">2</span><div><strong>错误类型排查</strong><p>{{ errHint }}</p></div></div>
+        <div class="fw"><span class="fn" style="background:var(--green-light);color:var(--green)">3</span><div><strong>定位错误</strong><p>语法 → 逻辑 → 边界 → 输出</p></div></div>
+        <div class="fw"><span class="fn" style="background:var(--rose-light);color:#c96a6b">4</span><div><strong>输出反馈</strong><p>结论 → 反例 → 修改 → 沉淀</p></div></div>
+      </div>
+    </details>
+  </div>`,
+  setup() {
+    const el = ref(null);
+    const errorTypes = [
+      { value: 'WA', label: 'Wrong Answer', badge: 'danger' }, { value: 'PE', label: 'Presentation Error', badge: 'warning' },
+      { value: 'RE', label: 'Runtime Error', badge: 'danger' }, { value: 'SO', label: 'Stack Overflow', badge: 'danger' },
+      { value: 'FPE', label: 'Floating Point Error', badge: 'warning' }, { value: 'TLE', label: 'Time Limit Exceeded', badge: 'warning' },
+      { value: 'MLE', label: 'Memory Limit Exceeded', badge: 'warning' }, { value: 'CE', label: 'Compile Error', badge: 'info' },
+      { value: 'OLE', label: 'Output Limit Exceeded', badge: 'warning' }, { value: 'SE', label: 'System Error', badge: 'info' },
+      { value: 'UNSUBMITTED', label: '未提交', badge: 'info' },
+    ];
+    const hintMap = { WA: '优先查逻辑/边界/题意', TLE: '优先查复杂度/死循环', RE: '优先查越界/除0', CE: '优先查语法/头文件', PE: '优先查输出格式' };
+    const errInfo = computed(() => errorTypes.find(e => e.value === store.debugErrorType));
+    const errHint = computed(() => hintMap[store.debugErrorType] || '针对性排查');
+    onMounted(() => { if (el.value) gsap.from(el.value.children, { y: 10, autoAlpha: 0, duration: .35, stagger: .04, ease: 'power2.out' }) });
+    onUnmounted(() => gsap.killTweensOf(el.value?.children));
+    return { el, store, errorTypes, errInfo, errHint }
+  }
+};
+
+// --- Review Panel ---
+const ReviewPanel = {
+  template: `<div class="surface" ref="el" style="display:flex;flex-direction:column;gap:.6rem">
+    <div class="pn-hd"><h3>复习模式</h3></div>
+    <div class="fg"><label class="fl">复习范围</label>
+      <div class="or">
+        <button v-for="s in scopes" :key="s.value" class="ob" :class="{ on: store.reviewScope===s.value }" @click="store.reviewScope=s.value">{{ s.label }}</button>
+      </div>
+    </div>
+    <div class="fg"><label class="fl">练习形式</label>
+      <div class="or">
+        <button v-for="p in practices" :key="p.value" class="ob" :class="{ on: store.practiceType===p.value }" @click="store.practiceType=p.value">{{ p.label }}</button>
+      </div>
+    </div>
+    <details class="tg">
+      <summary class="tg-sum"><span>分析预览</span><svg class="tg-arw" width="9" height="9" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 4.5l3 3 3-3"/></svg></summary>
+      <div class="tg-bd">
+        <div class="anal-sec"><h4>错题统计</h4><div class="stat-r"><div class="stat-i"><strong>—</strong><span>错误最多考点</span></div><div class="stat-i"><strong>—</strong><span>错误最多原因</span></div><div class="stat-i"><strong>—</strong><span>反复错类型</span></div></div></div>
+        <div class="anal-sec"><h4>掌握度</h4><div class="mb"><span class="m-s mm">已掌握</span><span class="m-s mo">基本掌握</span><span class="m-s mh">半掌握</span><span class="m-s mn">未掌握</span></div></div>
+        <div class="anal-sec"><h4>输出内容</h4><ul class="ol"><li>考点错误排行榜</li><li>错因排行榜</li><li>今日复习建议</li><li>错题重做列表</li><li>模板代码复习</li><li>高频坑点提醒</li></ul></div>
+      </div>
+    </details>
+  </div>`,
+  setup() {
+    const el = ref(null);
+    const scopes = [{ value: 'all', label: '全部错题' }, { value: 'week', label: '最近一周' }, { value: 'topic', label: '指定考点' }, { value: 'errorType', label: '指定错误类型' }];
+    const practices = [{ value: 'idea', label: '只看思路' }, { value: 'full', label: '写完整代码' }, { value: 'fill', label: '代码填空' }, { value: 'core', label: '只写核心函数' }];
+    onMounted(() => { if (el.value) gsap.from(el.value.children, { y: 10, autoAlpha: 0, duration: .35, stagger: .04, ease: 'power2.out' }) });
+    onUnmounted(() => gsap.killTweensOf(el.value?.children));
+    return { el, store, scopes, practices }
+  }
+};
+
+// --- Result Panel ---
+const ResultPanel = {
+  template: `<div class="rp surface" ref="el">
+    <div v-if="!apiReady && !store.isProcessing" class="wb">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#567357" stroke-width="2" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <span>API 未配置 — 点击顶部 <strong>API</strong> 按钮设置</span>
+    </div>
+    <transition name="fade"><div v-if="err" class="er">{{ err }}</div></transition>
+    <div class="sr">
+      <button ref="sbtn" class="btn-p" :class="{ rose: store.activeMode==='debug', loading: store.isProcessing }" :disabled="store.isProcessing" @click="submit">
+        <span v-if="!store.isProcessing" style="display:flex;align-items:center;gap:.3rem">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          开始分析
+        </span>
+        <span v-else style="display:flex;align-items:center;gap:.3rem"><span class="spn"></span>AI 分析中...</span>
+      </button>
+      <button v-if="store.result||store.inputText||store.uploadedImage||store.userCode" class="btn-s" @click="clr">清空</button>
+    </div>
+    <div v-if="store.isProcessing" class="sk"><div class="sl w6"></div><div class="sl w8"></div><div class="sl w5"></div><div class="sl w7"></div><div class="sl w5"></div></div>
+    <div v-if="store.result && !store.isProcessing" ref="rres" class="ra">
+      <div class="rh"><h2>{{ store.result.title }}</h2><span class="bdg" :class="store.result.type==='debug'?'bdg-r':'bdg-g'">{{ {explain:'讲解',debug:'纠错',review:'复习'}[store.result.type]||'' }}</span></div>
+      <div v-for="(s,i) in store.result.sections" :key="i" class="rs" :style="{ borderLeftColor: store.result.type==='debug' ? 'var(--rose)' : 'var(--green)' }">
+        <div class="rt" :class="store.result.type==='debug'?'r':'g'">{{ s.title }}</div>
+        <div><p v-for="(l,li) in s.content" :key="li" class="rl">{{ l }}</p></div>
+      </div>
+      <div v-if="store.result.code" style="margin-top:.1rem">
+        <div class="rt g" style="margin-bottom:.3rem">代码实现</div>
+        <div class="cb">
+          <button class="cb-cp" @click="cpy"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>复制</button>
+          <pre><code>{{ store.result.code }}</code></pre>
+        </div>
+      </div>
+    </div>
+  </div>`,
+  setup() {
+    const el = ref(null); const rres = ref(null); const sbtn = ref(null);
+    const err = ref(''); const apiReady = computed(() => isApiReady());
+
+    function toBase64(file) { return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file) }) }
+
+    async function submit() {
+      if (store.isProcessing) return; err.value = '';
+      if (!isApiReady()) { err.value = '请先配置 API Key'; shake(); return }
+      if (!store.inputText.trim() && !store.uploadedImage && !store.userCode.trim()) { err.value = store.activeMode==='debug'?'请粘贴代码':'请输入题目描述或上传截图'; shake(); return }
+      if (store.activeMode==='debug' && !store.userCode.trim()) { err.value = '请粘贴代码'; shake(); return }
+
+      store.isProcessing = true; store.clearResult(); pulse();
+      try {
+        let result;
+        async function callWithImage(sys, msg) {
+          if (!store.uploadedImage) return chatComplete([{ role: 'system', content: sys }, { role: 'user', content: msg }]);
+          const b = await toBase64(store.uploadedImage);
+          try {
+            return await chatComplete([{ role: 'system', content: sys }, { role: 'user', content: [{ type: 'text', text: msg }, { type: 'image_url', image_url: { url: b } }] }]);
+          } catch (imErr) {
+            if (imErr.message === 'IMAGE_NOT_SUPPORTED') {
+              err.value = '当前模型不支持图片输入，已自动跳过图片，仅使用文字分析';
+              return chatComplete([{ role: 'system', content: sys }, { role: 'user', content: msg }]);
+            }
+            throw imErr;
+          }
+        }
+        if (store.activeMode==='explain') {
+          const sys = explainSysPrompt(); const desc = store.inputText.trim() || '请分析截图中这道 OJ 题目';
+          const raw = await callWithImage(sys, desc); result = parseResult(raw, 'explain')
+        } else if (store.activeMode==='debug') {
+          const sys = debugSysPrompt(); const d = store.inputText.trim() ? `题目描述：${store.inputText.trim()}\n\n` : ''; const e = `提交状态：${store.debugErrorType}`; const c = `用户代码：\n\`\`\`\n${store.userCode}\n\`\`\``; const msg = `${d}${e}\n\n${c}`;
+          const raw = await callWithImage(sys, msg); result = parseResult(raw, 'debug')
+        } else {
+          const sys = reviewSysPrompt(); const sm = { all: '全部错题', week: '最近一周', topic: '指定考点', errorType: '指定错误类型' }; const tm = { idea: '只看思路', full: '写完整代码', fill: '代码填空', core: '只写核心函数' };
+          const msg = `复习范围：${sm[store.reviewScope]}\n练习形式：${tm[store.practiceType]}\n\n` + (store.inputText.trim() ? `补充：${store.inputText.trim()}\n` : '');
+          const raw = await chatComplete([{ role: 'system', content: sys }, { role: 'user', content: msg }]); result = parseResult(raw, 'review')
+        }
+        store.addHistory(result);
+        store.result = result;
+        nextTick(() => { if (rres.value) { const tl = gsap.timeline({ defaults: { ease: 'power3.out' } }); const h = rres.value.querySelector('.rh'); if (h) tl.from(h, { y: -10, autoAlpha: 0, duration: .3 }); const items = rres.value.querySelectorAll('.rs'); if (items.length) tl.from(items, { y: 14, autoAlpha: 0, duration: .35, stagger: .05 }, '-=.05') } })
+      } catch (ex) { err.value = ex.message === 'API_KEY_MISSING' ? '请先配置 API Key' : `请求失败：${ex.message}` }
+      finally { store.isProcessing = false }
+    }
+
+    function pulse() { if (sbtn.value) gsap.timeline().to(sbtn.value, { scale: .95, duration: .1 }).to(sbtn.value, { scale: 1, duration: .1, ease: 'back.out(2)' }) }
+    function shake() { if (sbtn.value) gsap.to(sbtn.value, { x: [-4, 4, -2, 2, -1, 1, 0], duration: .35 }) }
+    function cpy() { if (store.result?.code) { if (navigator.clipboard) navigator.clipboard.writeText(store.result.code); else { const ta = document.createElement('textarea'); ta.value = store.result.code; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta) } } }
+    function clr() { store.clearInput(); store.clearResult(); err.value = '' }
+
+    onMounted(() => { if (el.value) gsap.from(el.value.children, { y: 10, autoAlpha: 0, duration: .35, stagger: .04, ease: 'power2.out' }) });
+    onUnmounted(() => gsap.killTweensOf(el.value?.children));
+    return { el, rres, sbtn, store, err, apiReady, submit, cpy, clr }
+  }
+};
+
+// --- API Config ---
+const ApiConfig = {
+  template: `<div class="ac" ref="el">
+    <div class="ac-hd">
+      <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#567357" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>API 配置</h3>
+      <button class="btn-g" @click="$emit('close')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="ac-bd">
+      <div class="af"><label>API Endpoint</label><input v-model="f.endpoint" placeholder="https://api.openai.com/v1"></div>
+      <div class="ac-r">
+        <div class="af f1"><label>模型</label><input v-model="f.model" placeholder="gpt-4o / deepseek-chat..."></div>
+        <div class="af f1"><label>Temperature</label><div class="rg"><input type="range" v-model.number="f.temperature" min="0" max="1" step=".1"><span class="rv">{{ f.temperature }}</span></div></div>
+      </div>
+      <div class="af"><label>API Key</label><div class="kw"><input :type="sk?'text':'password'" v-model="f.apiKey" placeholder="sk-..."><button class="ke" @click="sk=!sk"><svg v-if="!sk" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg><svg v-else width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button></div></div>
+      <div class="ac-act"><button class="btn-p" @click="save">保存</button><span class="ac-note">配置保存在浏览器本地</span></div>
+    </div>
+  </div>`,
+  props: ['close'],
+  setup(props, { emit }) {
+    const el = ref(null); const sk = ref(false);
+    const f = reactive({ endpoint: store.apiConfig.endpoint, model: store.apiConfig.model, apiKey: store.apiConfig.apiKey, temperature: store.apiConfig.temperature });
+    function save() { store.setApiConfig({ ...f }); emit('close') }
+    onMounted(() => { if (el.value) gsap.from(el.value.children, { y: -6, autoAlpha: 0, duration: .25, stagger: .03, ease: 'power2.out' }) });
+    onUnmounted(() => gsap.killTweensOf(el.value?.children));
+    return { el, sk, f, save }
+  }
+};
+
+// ==============================
+// App
+// ==============================
+const app = createApp({
+  setup() {
+    const loading = ref(true);
+    const showApi = ref(false);
+    onMounted(() => {
+      setTimeout(() => { loading.value = false }, 80);
+    });
+    return { store, loading, showApi }
+  }
+});
+
+app.component('history-panel', HistoryPanel);
+app.component('mode-tabs', ModeTabs);
+app.component('input-panel', InputPanel);
+app.component('explain-panel', ExplainPanel);
+app.component('debug-panel', DebugPanel);
+app.component('review-panel', ReviewPanel);
+app.component('result-panel', ResultPanel);
+app.component('api-config', ApiConfig);
+
+app.mount('#app');
+</script>
+</body>
+</html>

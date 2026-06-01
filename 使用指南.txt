@@ -1,0 +1,5 @@
+1. 在文件夹根目录新建终端
+2. 输入以下指令：
+npm install
+npm run dev
+3. 按住ctrl，左键点击弹出来的http地址
