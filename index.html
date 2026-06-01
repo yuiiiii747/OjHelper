@@ -154,12 +154,12 @@ textarea{resize:vertical;min-height:80px}
 .rh{display:flex;align-items:center;justify-content:space-between}
 .rh h2{font-size:1rem}
 .rs{background:var(--bg-surface);border:1px solid var(--border-light);border-left:3px solid var(--green);border-radius:var(--radius-sm);padding:.6rem .8rem}
-.rt{font-size:.82rem;font-weight:600;margin-bottom:.3rem}
+.rt{font-size:.95rem;font-weight:600;margin-bottom:.3rem}
 .rt.g{color:var(--green)}
 .rt.r{color:#c96a6b}
-.rl{font-size:.78rem;color:var(--text-secondary);line-height:1.5;padding:.1rem 0}
+.rl{font-size:.92rem;color:var(--text-secondary);line-height:1.65;padding:.1rem 0}
 .cb{position:relative;background:#2a2624;border-radius:var(--radius-sm);overflow:hidden;margin-top:.3rem}
-.cb pre{padding:.75rem;overflow-x:auto;font-size:.73rem;line-height:1.5}
+.cb pre{padding:.75rem;overflow-x:auto;font-size:.85rem;line-height:1.6}
 .cb code{font-family:'SF Mono','Fira Code','Consolas','Courier New',monospace;color:#e8e0dc;white-space:pre}
 .cb-cp{position:absolute;top:5px;right:5px;display:flex;align-items:center;gap:.2rem;padding:.18rem .45rem;background:rgba(255,255,255,.08);color:var(--text-muted);border:1px solid rgba(255,255,255,.06);border-radius:4px;font-size:.63rem;cursor:pointer}
 .cb-cp:hover{background:rgba(255,255,255,.15);color:var(--text-secondary)}
@@ -215,6 +215,44 @@ textarea{resize:vertical;min-height:80px}
 .kl.h{background:rgba(122,155,181,.12);color:#7a9bb5}
 .kt{display:flex;flex-wrap:wrap;gap:.22rem}
 .kt span{font-size:.68rem;padding:.08rem .4rem;background:var(--bg-surface);border:1px solid var(--border-light);border-radius:4px;color:var(--text-secondary)}
+
+/* ===== History Filter ===== */
+.hp-fil{display:flex;gap:.2rem;margin-bottom:.35rem;flex-wrap:wrap}
+.hp-fb{padding:.15rem .4rem;font-size:.63rem;font-weight:600;background:transparent;border:1px solid var(--border-light);border-radius:4px;color:var(--text-muted);cursor:pointer;transition:all .15s}
+.hp-fb:hover{background:var(--bg-hover);color:var(--text-secondary)}
+.hp-fb.on{background:var(--green-light);border-color:var(--green);color:var(--green)}
+
+/* ===== Wrong Question Prompt ===== */
+.wqp{margin-top:.55rem;padding:.55rem .7rem;background:var(--bg-inset);border:1px solid var(--border-light);border-radius:var(--radius-sm);display:flex;flex-direction:column;gap:.35rem}
+.wqp-h{font-size:.82rem;font-weight:600;color:var(--text-secondary)}
+.wqp-t{display:flex;align-items:center;gap:.35rem;font-size:.8rem;color:var(--text-secondary);cursor:pointer;user-select:none}
+.wqp-t input[type=checkbox]{width:auto;accent-color:var(--green);cursor:pointer}
+.wqp-m{display:flex;align-items:center;gap:.25rem;flex-wrap:wrap;margin-top:.05rem}
+.wqp-m span{font-size:.72rem;color:var(--text-muted)}
+.wqp-s{padding:.22rem .5rem;font-size:.72rem;font-weight:600;background:var(--bg-surface);border:1px solid var(--border-light);border-radius:5px;cursor:pointer;transition:all .15s}
+.wqp-s.on{border-color:var(--green);background:var(--green-light);color:var(--green)}
+.wqp-s.on-r{border-color:var(--rose);background:var(--rose-light);color:#c96a6b}
+.wqp-s.on-w{border-color:#c9a84c;background:rgba(201,168,76,.08);color:#c9a84c}
+.wqp-s.on-d{background:var(--bg-inset);border-color:var(--border);color:var(--text-muted)}
+.wqp-ok{margin-top:.1rem}
+.wqp-done{font-size:.72rem;color:var(--green)}
+
+/* ===== Wrong Question Bank (Review) ===== */
+.wqb{display:flex;flex-direction:column;gap:.25rem}
+.wqi{display:flex;align-items:center;gap:.3rem;padding:.35rem .5rem;background:var(--bg-surface);border:1px solid var(--border-light);border-radius:var(--radius-sm);transition:background .15s}
+.wqi:hover{background:var(--bg-hover)}
+.wqi-pv{font-size:.72rem;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+.wqi-bdg{font-size:.6rem;font-weight:600;padding:.04rem .3rem;border-radius:3px;flex-shrink:0}
+.wqi-bdg.g{background:var(--green-light);color:var(--green)}
+.wqi-bdg.r{background:var(--rose-light);color:#c96a6b}
+.wqi-bdg.o{background:rgba(86,115,87,.06);color:var(--green-mid)}
+.wqi-bdg.n{background:rgba(212,106,107,.06);color:var(--danger)}
+.wqi-act{display:flex;gap:.2rem;flex-shrink:0}
+.wqi-btn{font-size:.6rem;padding:.1rem .35rem;background:transparent;border:1px solid var(--border-light);border-radius:4px;color:var(--text-muted);cursor:pointer;transition:all .15s}
+.wqi-btn:hover{border-color:var(--green);color:var(--green)}
+.wqi-btn.on{border-color:var(--green);background:var(--green-light);color:var(--green)}
+.wqi-btn.done:hover{border-color:var(--rose);color:var(--danger)}
+.wq-em{text-align:center;padding:.8rem 0;color:var(--text-muted);font-size:.72rem}
 
 .fade-enter-active,.fade-leave-active{transition:opacity .2s}
 .fade-enter-from,.fade-leave-to{opacity:0}
@@ -285,13 +323,15 @@ const store = reactive({
   debugErrorType: 'WA', userCode: '',
   reviewScope: 'all', practiceType: 'idea',
   isProcessing: false, result: null,
-  history: savedHistory,
+  history: savedHistory, historyFilter: 'all',
+  wrongQuestions: JSON.parse(localStorage.getItem('carol_wq') || '[]'),
+  wqEnabled: false, wqMastery: 'not_mastered',
 
   setMode(m) { this.activeMode = m; this.result = null },
   setApiConfig(c) { Object.assign(this.apiConfig, c); localStorage.setItem('carol_api_config', JSON.stringify(this.apiConfig)) },
   setImage(f) { this.uploadedImage = f; this.uploadedImageUrl = f ? URL.createObjectURL(f) : null },
   clearInput() { this.inputText = ''; this.uploadedImage = null; this.uploadedImageUrl = null; this.userCode = '' },
-  clearResult() { this.result = null },
+  clearResult() { this.result = null; this.wqEnabled = false; this.wqMastery = 'not_mastered' },
 
   addHistory(entry) {
     this.history.unshift({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), time: new Date().toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }), mode: this.activeMode, inputPreview: (this.inputText || '(图片)').slice(0, 60), hasImage: !!this.uploadedImage, hasCode: !!this.userCode, resultTitle: entry?.title || '', summary: entry?.sections?.[0]?.title || '', fullResult: entry });
@@ -305,6 +345,9 @@ const store = reactive({
     }
   },
   clearHistory() { this.history = []; localStorage.setItem('carol_history', JSON.stringify(this.history)) },
+  addWrongQuestion(q) { this.wrongQuestions.unshift(q); if (this.wrongQuestions.length > 100) this.wrongQuestions.pop(); localStorage.setItem('carol_wq', JSON.stringify(this.wrongQuestions)) },
+  updateWQMastery(id, level) { const q = this.wrongQuestions.find(w => w.id === id); if (!q) return; q.masteryLevel = level; if (level === 'mastered') this.wrongQuestions = this.wrongQuestions.filter(w => w.id !== id); localStorage.setItem('carol_wq', JSON.stringify(this.wrongQuestions)) },
+  removeWQ(id) { this.wrongQuestions = this.wrongQuestions.filter(w => w.id !== id); localStorage.setItem('carol_wq', JSON.stringify(this.wrongQuestions)) },
 });
 
 // ==============================
@@ -391,10 +434,10 @@ function debugSysPrompt() {
 }
 
 function reviewSysPrompt() {
-  return `你是一位资深的 ACM/算法竞赛教练。根据用户指定的复习范围和练习形式，输出以下 Markdown 结构：
+  return `你是一位资深的 ACM/算法竞赛教练。用户提供了错题列表（含掌握程度），请结合错题数据和用户指定的复习范围、练习形式，输出以下 Markdown 结构：
 
 # 错题统计
-- 错误最多考点
+- 错误最多考点（结合提供的错题数据）
 - 错误最多原因
 - 最近反复错类型
 
@@ -402,11 +445,13 @@ function reviewSysPrompt() {
 列出常见错误类型并分析
 
 # 掌握度判断
-评估各知识点掌握程度
+评估各知识点掌握程度，优先处理「未掌握」「半掌握」的题目
 
 # 复习优先级排序
+优先排序未掌握题目
 
-# 今日复习建议`
+# 今日复习建议
+针对未掌握和半掌握的知识点给出具体建议`
 }
 
 function parseResult(md, mode) {
@@ -438,8 +483,11 @@ const HistoryPanel = {
       <span class="hp-title">历史记录</span>
       <button v-if="store.history.length" class="hp-clr" :class="{ ok: cf }" @click="doClear">{{ cf ? '确认清空' : '清空' }}</button>
     </div>
-    <div v-if="store.history.length" class="hp-list">
-      <button v-for="item in store.history" :key="item.id" class="hp-item" @click="store.loadHistoryItem(item)">
+    <div v-if="store.history.length" class="hp-fil">
+      <button v-for="f in ['all','explain','debug','review']" :key="f" class="hp-fb" :class="{ on: store.historyFilter===f }" @click="store.historyFilter=f">{{ {all:'全部',explain:'讲解',debug:'纠错',review:'复习'}[f] }}</button>
+    </div>
+    <div v-if="(store.historyFilter==='all'?store.history:store.history.filter(h=>h.mode===store.historyFilter)).length" class="hp-list">
+      <button v-for="item in (store.historyFilter==='all'?store.history:store.history.filter(h=>h.mode===store.historyFilter))" :key="item.id" class="hp-item" @click="store.loadHistoryItem(item)">
         <div class="hp-h">
           <span class="hp-bdg" :class="item.mode==='debug'?'hp-r':'hp-g'">{{ {explain:'讲解',debug:'纠错',review:'复习'}[item.mode]||item.mode }}</span>
           <span class="hp-time">{{ item.time }}</span>
@@ -448,9 +496,12 @@ const HistoryPanel = {
         <p v-if="item.resultTitle" class="hp-rs">{{ item.resultTitle }}</p>
       </button>
     </div>
-    <div v-else class="hp-em">
+    <div v-if="!store.history.length" class="hp-em">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a89e98" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       <p>暂无记录</p>
+    </div>
+    <div v-if="store.history.length && store.historyFilter!=='all' && !store.history.filter(h=>h.mode===store.historyFilter).length" class="hp-em">
+      <p>该模式下暂无记录</p>
     </div>
   </div>`,
   setup() {
@@ -604,6 +655,24 @@ const ReviewPanel = {
         <div class="anal-sec"><h4>输出内容</h4><ul class="ol"><li>考点错误排行榜</li><li>错因排行榜</li><li>今日复习建议</li><li>错题重做列表</li><li>模板代码复习</li><li>高频坑点提醒</li></ul></div>
       </div>
     </details>
+    <div class="fg" style="margin-top:.1rem">
+      <label class="fl">错题本 <span style="font-weight:400;color:var(--text-muted);font-size:.7rem">· 点击升级掌握度</span></label>
+      <div v-if="store.wrongQuestions.length" class="wqb">
+        <div v-for="wq in store.wrongQuestions" :key="wq.id" class="wqi">
+          <span class="wqi-bdg" :class="wq.mode==='debug'?'r':'g'">{{ {explain:'讲解',debug:'纠错',review:'复习'}[wq.mode]||wq.mode }}</span>
+          <span class="wqi-pv">{{ wq.preview }}</span>
+          <div class="wqi-act">
+            <button class="wqi-btn" :class="{on:wq.masteryLevel==='not_mastered'}" @click="store.updateWQMastery(wq.id,'not_mastered')">未掌握</button>
+            <button class="wqi-btn" :class="{on:wq.masteryLevel==='half_mastered'}" @click="store.updateWQMastery(wq.id,'half_mastered')">半掌握</button>
+            <button class="wqi-btn" :class="{on:wq.masteryLevel==='basically_mastered'}" @click="store.updateWQMastery(wq.id,'basically_mastered')">基本掌握</button>
+            <button class="wqi-btn done" @click="store.updateWQMastery(wq.id,'mastered')">✓移出</button>
+          </div>
+        </div>
+      </div>
+      <div v-else class="wq-em">
+        <p>暂无错题记录 — 在讲解/纠错结果下方可纳入错题</p>
+      </div>
+    </div>
   </div>`,
   setup() {
     const el = ref(null);
@@ -648,10 +717,47 @@ const ResultPanel = {
         </div>
       </div>
     </div>
+    <div v-if="store.result && !store.isProcessing && store.activeMode!=='review'" class="wqp">
+      <div class="wqp-h">错题沉淀</div>
+      <label class="wqp-t">
+        <input type="checkbox" v-model="store.wqEnabled">
+        将此题纳入错题集
+      </label>
+      <div v-if="store.wqEnabled" class="wqp-m">
+        <span>掌握程度：</span>
+        <button v-for="m in masteryOpts" :key="m.key" class="wqp-s" :class="{ on: store.wqMastery===m.key }" @click="store.wqMastery=m.key">{{ m.label }}</button>
+        <button class="btn-p wqp-ok" @click="saveWQ" style="padding:.35rem .8rem;font-size:.72rem">确认纳入</button>
+      </div>
+      <div v-if="wqSaved" class="wqp-done">已加入错题集 ✓</div>
+    </div>
   </div>`,
   setup() {
     const el = ref(null); const rres = ref(null); const sbtn = ref(null);
     const err = ref(''); const apiReady = computed(() => isApiReady());
+    const wqSaved = ref(false);
+    const masteryOpts = [
+      { key: 'not_mastered', label: '未掌握' },
+      { key: 'half_mastered', label: '半掌握' },
+      { key: 'basically_mastered', label: '基本掌握' },
+      { key: 'mastered', label: '已掌握' },
+    ];
+    function saveWQ() {
+      if (!store.result) return;
+      const q = {
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+        mode: store.activeMode,
+        preview: store.inputText.slice(0, 60) || (store.uploadedImage ? '(图片)' : ''),
+        masteryLevel: store.wqMastery,
+        dateAdded: new Date().toISOString(),
+        errorType: store.activeMode === 'debug' ? store.debugErrorType : '',
+        resultTitle: store.result?.title || '',
+      };
+      store.addWrongQuestion(q);
+      wqSaved.value = true;
+      store.wqEnabled = false;
+      store.wqMastery = 'not_mastered';
+      setTimeout(() => { wqSaved.value = false }, 2000);
+    }
 
     function toBase64(file) { return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file) }) }
 
@@ -685,7 +791,14 @@ const ResultPanel = {
           const raw = await callWithImage(sys, msg); result = parseResult(raw, 'debug')
         } else {
           const sys = reviewSysPrompt(); const sm = { all: '全部错题', week: '最近一周', topic: '指定考点', errorType: '指定错误类型' }; const tm = { idea: '只看思路', full: '写完整代码', fill: '代码填空', core: '只写核心函数' };
-          const msg = `复习范围：${sm[store.reviewScope]}\n练习形式：${tm[store.practiceType]}\n\n` + (store.inputText.trim() ? `补充：${store.inputText.trim()}\n` : '');
+          let msg = `复习范围：${sm[store.reviewScope]}\n练习形式：${tm[store.practiceType]}\n\n` + (store.inputText.trim() ? `补充：${store.inputText.trim()}\n` : '');
+          if (store.wrongQuestions.length) {
+            const ml = { not_mastered: '未掌握', half_mastered: '半掌握', basically_mastered: '基本掌握', mastered: '已掌握' };
+            msg += `\n## 当前错题列表\n`;
+            store.wrongQuestions.slice(0, 20).forEach((wq, i) => {
+              msg += `${i+1}. [${wq.mode==='debug'?'纠错':'讲解'}] ${wq.preview || '(题目)'} — 掌握程度：${ml[wq.masteryLevel]||'未知'}${wq.errorType?' (错误类型：'+wq.errorType+')':''}\n`;
+            });
+          }
           const raw = await chatComplete([{ role: 'system', content: sys }, { role: 'user', content: msg }]); result = parseResult(raw, 'review')
         }
         store.addHistory(result);
@@ -702,7 +815,7 @@ const ResultPanel = {
 
     onMounted(() => { if (el.value) gsap.from(el.value.children, { y: 10, autoAlpha: 0, duration: .35, stagger: .04, ease: 'power2.out' }) });
     onUnmounted(() => gsap.killTweensOf(el.value?.children));
-    return { el, rres, sbtn, store, err, apiReady, submit, cpy, clr }
+    return { el, rres, sbtn, store, err, apiReady, submit, cpy, clr, wqSaved, masteryOpts, saveWQ }
   }
 };
 
