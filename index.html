@@ -242,6 +242,11 @@ textarea{resize:vertical;min-height:80px}
 .wqi{display:flex;align-items:center;gap:.3rem;padding:.35rem .5rem;background:var(--bg-surface);border:1px solid var(--border-light);border-radius:var(--radius-sm);transition:background .15s}
 .wqi:hover{background:var(--bg-hover)}
 .wqi-pv{font-size:.72rem;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+.wqi-pv.clickable{cursor:pointer;color:var(--text-primary)}
+.wqi-pv.clickable:hover{color:var(--green);text-decoration:underline}
+.wqi-tags{display:flex;gap:.15rem;flex-shrink:0;max-width:120px;overflow:hidden}
+.wqi-tag{font-size:.58rem;padding:.04rem .3rem;background:var(--green-light);color:var(--green);border-radius:3px;cursor:pointer;white-space:nowrap;font-weight:600}
+.wqi-tag:hover{background:var(--green);color:#fff;border-color:var(--green)}
 .wqi-bdg{font-size:.6rem;font-weight:600;padding:.04rem .3rem;border-radius:3px;flex-shrink:0}
 .wqi-bdg.g{background:var(--green-light);color:var(--green)}
 .wqi-bdg.r{background:var(--rose-light);color:#c96a6b}
@@ -325,7 +330,7 @@ const store = reactive({
   isProcessing: false, result: null,
   history: savedHistory, historyFilter: 'all',
   wrongQuestions: JSON.parse(localStorage.getItem('carol_wq') || '[]'),
-  wqEnabled: false, wqMastery: 'not_mastered',
+  wqEnabled: false, wqMastery: 'not_mastered', lastHistoryId: null,
 
   setMode(m) { this.activeMode = m; this.result = null },
   setApiConfig(c) { Object.assign(this.apiConfig, c); localStorage.setItem('carol_api_config', JSON.stringify(this.apiConfig)) },
@@ -333,13 +338,15 @@ const store = reactive({
   clearInput() { this.inputText = ''; this.uploadedImage = null; this.uploadedImageUrl = null; this.userCode = '' },
   clearResult() { this.result = null; this.wqEnabled = false; this.wqMastery = 'not_mastered' },
 
-  addHistory(entry) {
-    this.history.unshift({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), time: new Date().toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }), mode: this.activeMode, inputPreview: (this.inputText || '(图片)').slice(0, 60), hasImage: !!this.uploadedImage, hasCode: !!this.userCode, resultTitle: entry?.title || '', summary: entry?.sections?.[0]?.title || '', fullResult: entry });
+  addHistory(entry, id) {
+    const finalId = id || Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    this.history.unshift({ id: finalId, time: new Date().toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }), mode: this.activeMode, inputPreview: (this.inputText || '(图片)').slice(0, 60), hasImage: !!this.uploadedImage, hasCode: !!this.userCode, resultTitle: entry?.title || '', summary: entry?.sections?.[0]?.title || '', fullResult: entry });
     if (this.history.length > 50) this.history.pop();
     localStorage.setItem('carol_history', JSON.stringify(this.history));
   },
   loadHistoryItem(item) {
     this.setMode(item.mode);
+    this.lastHistoryId = item.id || '';
     if (item.fullResult) {
       this.result = item.fullResult;
     }
@@ -434,24 +441,24 @@ function debugSysPrompt() {
 }
 
 function reviewSysPrompt() {
-  return `你是一位资深的 ACM/算法竞赛教练。用户提供了错题列表（含掌握程度），请结合错题数据和用户指定的复习范围、练习形式，输出以下 Markdown 结构：
+  return `你是一位资深的 ACM/算法竞赛教练。用户提供了错题列表（含掌握程度、考点标签、错误类型），请结合错题数据和用户指定的复习范围、练习形式，输出以下 Markdown 结构：
 
 # 错题统计
-- 错误最多考点（结合提供的错题数据）
+- 错误最多考点（结合提供的错题考点标签统计）
 - 错误最多原因
 - 最近反复错类型
 
 # 错因归类
-列出常见错误类型并分析
+根据题目提供的错误类型（WA/TLE/RE 等）及用户错题记录归类
 
 # 掌握度判断
-评估各知识点掌握程度，优先处理「未掌握」「半掌握」的题目
+评估各知识点（考点标签）掌握程度，优先处理「未掌握」「半掌握」的题目
 
 # 复习优先级排序
-优先排序未掌握题目
+优先排序未掌握题目，按考点标签分组
 
 # 今日复习建议
-针对未掌握和半掌握的知识点给出具体建议`
+针对未掌握和半掌握的知识点给出具体建议，按考点标签维度组织`
 }
 
 function parseResult(md, mode) {
@@ -471,6 +478,70 @@ function parseResult(md, mode) {
   const tm = { explain: '题目分析结果', debug: '代码纠错报告', review: '复习计划' };
   return { type: mode, title: tm[mode] || '分析结果', sections, code, raw: md };
 }
+
+function extractKnowledgePoints(result, mode) {
+  if (!result || !result.sections) return ['default'];
+  let extracted = [];
+  try {
+    if (mode === 'explain') {
+      const sec = result.sections.find(s => s.title === '考点分析');
+      if (sec && sec.content.length) {
+        for (const line of sec.content) {
+          const m = line.match(/^真正考点[：:]\s*(.+)/);
+          if (m) { extracted = m[1].split(/[、,，\/;；\s]+/).filter(s => s.length > 1); break; }
+        }
+        if (!extracted.length) {
+          for (const line of sec.content) {
+            const parts = line.split(/[：:]\s*/);
+            if (parts.length > 1 && parts[1].trim().length > 1) { extracted = [parts[1].trim()]; break; }
+          }
+        }
+      }
+    } else if (mode === 'debug') {
+      const sec = result.sections.find(s => s.title === '错误结论' || s.title === '错题沉淀');
+      if (sec && sec.content.length) {
+        for (const line of sec.content) {
+          const m = line.match(/[：:]\s*(.+)/);
+          if (m) { extracted.push(m[1].trim()); if (extracted.length >= 2) break; }
+        }
+      }
+    }
+  } catch (e) {}
+  // Cross-reference against skill tree, or search whole result
+  const searchText = (extracted.join(' ') + ' ' + (result.raw || '') + ' ' + result.sections.map(s => s.title + ' ' + s.content.join(' ')).join(' ')).toLowerCase();
+  const skillMatched = skillTreeKeywords.filter(kw => searchText.includes(kw.toLowerCase())).slice(0, 4);
+  if (skillMatched.length) return skillMatched;
+  if (extracted.length) return extracted.slice(0, 4);
+  return ['default'];
+}
+
+const skillTreeKeywords = [
+  '并查集','树状数组','BIT','ST表','Sparse Table','单调队列','单调栈','Trie','字典树',
+  'Dijkstra','Floyd','最短路','Tarjan','割点','桥','最小生成树','Kruskal','Prim','拓扑排序',
+  '线性DP','背包DP','区间DP','数位DP','树上DP',
+  'KMP','字符串哈希','最小表示法',
+  'GCD','欧几里得','EXGCD','扩展欧几里得','费马小定理','排列组合','线性筛','素数筛',
+  '向量','点积','叉积','线段交点','多边形面积',
+  '二分','三分','离散化','暴力剪枝',
+  '线段树','平衡树','Treap','Splay','FHQ','树链剖分','重链','长链','分块','莫队',
+  '差分约束','二分图匹配','匈牙利','欧拉回路','哈密顿路','虚树','2-SAT',
+  '状压DP','斜率优化','四边形不等式','概率DP','期望DP','单调队列优化DP',
+  'AC自动机','Manacher','回文树','PAM','Lyndon分解','广义AC自动机','Z算法','ExKMP',
+  'CRT','EXCRT','中国剩余定理','欧拉定理','欧拉函数','Lucas','卢卡斯','SG函数','博弈论',
+  '线性基','矩阵乘法','高斯消元','容斥','斯特林数','卡特兰数',
+  '凸包','旋转卡壳','半平面交','扫描线','最小圆覆盖','辛普森',
+  'CDQ分治','整体二分','点分治','根号分治','模拟退火','随机化','交互题',
+  'LCT','Link-Cut Tree','主席树','可持久化','KD-Tree','析合树','笛卡尔树',
+  '跳表','Skip List','左偏树','配对堆','李超线段树','线段树分治',
+  '网络流','Dinic','ISAP','费用流','上下界流','一般图匹配','带花树',
+  'Matrix-Tree','支配树','圆方树','朱刘算法','最小树形图',
+  'DP套DP','DDP','动态DP','WQS二分','插头DP','生成函数',
+  'SAM','后缀自动机','SA','后缀数组','后缀树','后缀平衡树',
+  '杜教筛','Min_25筛','莫比乌斯反演','FFT','NTT','FWT','多项式求逆','多项式开方','多项式对数','多项式指数',
+  '二次剩余','Cipolla','线性规划','单纯形法','Pólya','Burnside','Polya',
+  '动态凸包','闵可夫斯基和','三维凸包',
+  '构造题','动态点分治','点分树','边分治','DLX','舞蹈链',
+];
 
 // ==============================
 // Components
@@ -613,6 +684,24 @@ const DebugPanel = {
         <div class="fw"><span class="fn" style="background:var(--rose-light);color:#c96a6b">4</span><div><strong>输出反馈</strong><p>结论 → 反例 → 修改 → 沉淀</p></div></div>
       </div>
     </details>
+    <details class="tg" v-if="store.wrongQuestions.length">
+      <summary class="tg-sum"><span>关联错题 ({{ debugWQItems.length }})</span><svg class="tg-arw" width="9" height="9" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 4.5l3 3 3-3"/></svg></summary>
+      <div class="tg-bd">
+        <div class="fg" style="margin-bottom:.2rem">
+          <div class="or">
+            <button v-for="kp in debugWQKps" :key="kp" class="ob" :class="{ on: wqFilterKp===kp }" @click="wqFilterKp=kp">{{ kp==='all'?'全部':kp }}</button>
+          </div>
+        </div>
+        <div v-if="debugWQItems.length" class="wqb">
+          <div v-for="wq in debugWQItems" :key="wq.id" class="wqi">
+            <span class="wqi-bdg" :class="wq.mode==='debug'?'r':'g'">{{ {explain:'讲解',debug:'纠错'}[wq.mode]||wq.mode }}</span>
+            <span class="wqi-pv" :title="wq.preview">{{ wq.preview }}</span>
+            <span class="wqi-bdg" :class="{n:wq.masteryLevel==='not_mastered',r:wq.masteryLevel==='half_mastered',o:wq.masteryLevel==='basically_mastered',g:wq.masteryLevel==='mastered'}">{{ {not_mastered:'未掌握',half_mastered:'半掌握',basically_mastered:'基本掌握',mastered:'已掌握'}[wq.masteryLevel] }}</span>
+          </div>
+        </div>
+        <div v-else style="text-align:center;color:var(--text-muted);font-size:.7rem;padding:.3rem 0">无匹配错题</div>
+      </div>
+    </details>
   </div>`,
   setup() {
     const el = ref(null);
@@ -627,9 +716,18 @@ const DebugPanel = {
     const hintMap = { WA: '优先查逻辑/边界/题意', TLE: '优先查复杂度/死循环', RE: '优先查越界/除0', CE: '优先查语法/头文件', PE: '优先查输出格式' };
     const errInfo = computed(() => errorTypes.find(e => e.value === store.debugErrorType));
     const errHint = computed(() => hintMap[store.debugErrorType] || '针对性排查');
+    const wqFilterKp = ref('all');
+    const debugWQKps = computed(() => {
+      const s = new Set(); store.wrongQuestions.forEach(wq => (wq.knowledgePoints || ['default']).forEach(kp => s.add(kp)));
+      return ['all', ...s];
+    });
+    const debugWQItems = computed(() => {
+      if (wqFilterKp.value === 'all') return store.wrongQuestions;
+      return store.wrongQuestions.filter(wq => (wq.knowledgePoints || ['default']).includes(wqFilterKp.value));
+    });
     onMounted(() => { if (el.value) gsap.from(el.value.children, { y: 10, autoAlpha: 0, duration: .35, stagger: .04, ease: 'power2.out' }) });
     onUnmounted(() => gsap.killTweensOf(el.value?.children));
-    return { el, store, errorTypes, errInfo, errHint }
+    return { el, store, errorTypes, errInfo, errHint, wqFilterKp, debugWQKps, debugWQItems }
   }
 };
 
@@ -656,11 +754,20 @@ const ReviewPanel = {
       </div>
     </details>
     <div class="fg" style="margin-top:.1rem">
-      <label class="fl">错题本 <span style="font-weight:400;color:var(--text-muted);font-size:.7rem">· 点击升级掌握度</span></label>
-      <div v-if="store.wrongQuestions.length" class="wqb">
-        <div v-for="wq in store.wrongQuestions" :key="wq.id" class="wqi">
+      <label class="fl">错题本 <span style="font-weight:400;color:var(--text-muted);font-size:.7rem">· 点击题目跳转原始结果，点击标签可编辑</span></label>
+      <div v-if="store.wrongQuestions.length" class="fg" style="margin-bottom:.2rem;gap:.2rem">
+        <label class="fl" style="font-size:.68rem;color:var(--text-muted);font-weight:500">考点筛选</label>
+        <div class="or">
+          <button v-for="kp in reviewWQKps" :key="kp" class="ob" :class="{ on: reviewKpFilter===kp }" @click="reviewKpFilter=kp">{{ kp==='all'?'全部':kp }}</button>
+        </div>
+      </div>
+      <div v-if="reviewWQItems.length" class="wqb">
+        <div v-for="wq in reviewWQItems" :key="wq.id" class="wqi">
           <span class="wqi-bdg" :class="wq.mode==='debug'?'r':'g'">{{ {explain:'讲解',debug:'纠错',review:'复习'}[wq.mode]||wq.mode }}</span>
-          <span class="wqi-pv">{{ wq.preview }}</span>
+          <span class="wqi-pv clickable" :title="'查看原始结果'" @click="loadWQHistory(wq)">{{ wq.preview }}</span>
+          <div class="wqi-tags">
+            <span v-for="kp in (wq.knowledgePoints||['default'])" :key="kp" class="wqi-tag" @click="editWQTags(wq)">{{ kp }}</span>
+          </div>
           <div class="wqi-act">
             <button class="wqi-btn" :class="{on:wq.masteryLevel==='not_mastered'}" @click="store.updateWQMastery(wq.id,'not_mastered')">未掌握</button>
             <button class="wqi-btn" :class="{on:wq.masteryLevel==='half_mastered'}" @click="store.updateWQMastery(wq.id,'half_mastered')">半掌握</button>
@@ -668,6 +775,9 @@ const ReviewPanel = {
             <button class="wqi-btn done" @click="store.updateWQMastery(wq.id,'mastered')">✓移出</button>
           </div>
         </div>
+      </div>
+      <div v-else-if="reviewKpFilter!=='all' && store.wrongQuestions.length" class="wq-em">
+        <p>该标签下暂无错题</p>
       </div>
       <div v-else class="wq-em">
         <p>暂无错题记录 — 在讲解/纠错结果下方可纳入错题</p>
@@ -678,9 +788,37 @@ const ReviewPanel = {
     const el = ref(null);
     const scopes = [{ value: 'all', label: '全部错题' }, { value: 'week', label: '最近一周' }, { value: 'topic', label: '指定考点' }, { value: 'errorType', label: '指定错误类型' }];
     const practices = [{ value: 'idea', label: '只看思路' }, { value: 'full', label: '写完整代码' }, { value: 'fill', label: '代码填空' }, { value: 'core', label: '只写核心函数' }];
+    const reviewKpFilter = ref('all');
+    const reviewWQKps = computed(() => {
+      const s = new Set(); store.wrongQuestions.forEach(wq => (wq.knowledgePoints || ['default']).forEach(kp => s.add(kp)));
+      return ['all', ...s];
+    });
+    const reviewWQItems = computed(() => {
+      if (reviewKpFilter.value === 'all') return store.wrongQuestions;
+      return store.wrongQuestions.filter(wq => (wq.knowledgePoints || ['default']).includes(reviewKpFilter.value));
+    });
+    function loadWQHistory(wq) {
+      let item = null;
+      if (wq.historyId) item = store.history.find(h => h.id === wq.historyId);
+      if (!item && wq.resultTitle) item = store.history.find(h => h.resultTitle === wq.resultTitle && h.mode === wq.mode);
+      if (!item && wq.preview) item = store.history.find(h => h.inputPreview === wq.preview && h.mode === wq.mode);
+      if (!item) { alert('未找到关联的历史记录（可能已被清空）。新产生的错题将自动关联。'); return }
+      store.lastHistoryId = item.id || '';
+      store.activeMode = item.mode;
+      store.result = item.fullResult;
+    }
+    function editWQTags(wq) {
+      const cur = (wq.knowledgePoints || ['default']).join(', ');
+      const input = prompt('编辑考点标签（用逗号分隔）：', cur);
+      if (input !== null) {
+        wq.knowledgePoints = input.split(/[，,]\s*/).filter(Boolean);
+        if (!wq.knowledgePoints.length) wq.knowledgePoints = ['default'];
+        localStorage.setItem('carol_wq', JSON.stringify(store.wrongQuestions));
+      }
+    }
     onMounted(() => { if (el.value) gsap.from(el.value.children, { y: 10, autoAlpha: 0, duration: .35, stagger: .04, ease: 'power2.out' }) });
     onUnmounted(() => gsap.killTweensOf(el.value?.children));
-    return { el, store, scopes, practices }
+    return { el, store, scopes, practices, reviewKpFilter, reviewWQKps, reviewWQItems, loadWQHistory, editWQTags }
   }
 };
 
@@ -719,15 +857,18 @@ const ResultPanel = {
     </div>
     <div v-if="store.result && !store.isProcessing && store.activeMode!=='review'" class="wqp">
       <div class="wqp-h">错题沉淀</div>
-      <label class="wqp-t">
-        <input type="checkbox" v-model="store.wqEnabled">
-        将此题纳入错题集
-      </label>
-      <div v-if="store.wqEnabled" class="wqp-m">
-        <span>掌握程度：</span>
-        <button v-for="m in masteryOpts" :key="m.key" class="wqp-s" :class="{ on: store.wqMastery===m.key }" @click="store.wqMastery=m.key">{{ m.label }}</button>
-        <button class="btn-p wqp-ok" @click="saveWQ" style="padding:.35rem .8rem;font-size:.72rem">确认纳入</button>
-      </div>
+      <div v-if="isWQDuplicate" class="wqp-done" style="margin:0;font-size:.8rem">✓ 该记录已在错题本中</div>
+      <template v-else>
+        <label class="wqp-t">
+          <input type="checkbox" v-model="store.wqEnabled">
+          将此题纳入错题集
+        </label>
+        <div v-if="store.wqEnabled" class="wqp-m">
+          <span>掌握程度：</span>
+          <button v-for="m in masteryOpts" :key="m.key" class="wqp-s" :class="{ on: store.wqMastery===m.key }" @click="store.wqMastery=m.key">{{ m.label }}</button>
+          <button class="btn-p wqp-ok" @click="saveWQ" style="padding:.35rem .8rem;font-size:.72rem">确认纳入</button>
+        </div>
+      </template>
       <div v-if="wqSaved" class="wqp-done">已加入错题集 ✓</div>
     </div>
   </div>`,
@@ -735,6 +876,10 @@ const ResultPanel = {
     const el = ref(null); const rres = ref(null); const sbtn = ref(null);
     const err = ref(''); const apiReady = computed(() => isApiReady());
     const wqSaved = ref(false);
+    const isWQDuplicate = computed(() => {
+      if (!store.lastHistoryId) return false;
+      return store.wrongQuestions.some(wq => wq.historyId === store.lastHistoryId);
+    });
     const masteryOpts = [
       { key: 'not_mastered', label: '未掌握' },
       { key: 'half_mastered', label: '半掌握' },
@@ -743,6 +888,8 @@ const ResultPanel = {
     ];
     function saveWQ() {
       if (!store.result) return;
+      if (store.lastHistoryId && store.wrongQuestions.some(wq => wq.historyId === store.lastHistoryId)) return;
+      const kps = extractKnowledgePoints(store.result, store.activeMode);
       const q = {
         id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
         mode: store.activeMode,
@@ -751,6 +898,8 @@ const ResultPanel = {
         dateAdded: new Date().toISOString(),
         errorType: store.activeMode === 'debug' ? store.debugErrorType : '',
         resultTitle: store.result?.title || '',
+        knowledgePoints: kps,
+        historyId: store.lastHistoryId || '',
       };
       store.addWrongQuestion(q);
       wqSaved.value = true;
@@ -796,12 +945,15 @@ const ResultPanel = {
             const ml = { not_mastered: '未掌握', half_mastered: '半掌握', basically_mastered: '基本掌握', mastered: '已掌握' };
             msg += `\n## 当前错题列表\n`;
             store.wrongQuestions.slice(0, 20).forEach((wq, i) => {
-              msg += `${i+1}. [${wq.mode==='debug'?'纠错':'讲解'}] ${wq.preview || '(题目)'} — 掌握程度：${ml[wq.masteryLevel]||'未知'}${wq.errorType?' (错误类型：'+wq.errorType+')':''}\n`;
+              const kps = (wq.knowledgePoints || ['default']).join(', ');
+              msg += `${i+1}. [${wq.mode==='debug'?'纠错':'讲解'}] ${wq.preview || '(题目)'} — 掌握程度：${ml[wq.masteryLevel]||'未知'} 考点：[${kps}]${wq.errorType?' 错误类型：'+wq.errorType:''}\n`;
             });
           }
           const raw = await chatComplete([{ role: 'system', content: sys }, { role: 'user', content: msg }]); result = parseResult(raw, 'review')
         }
-        store.addHistory(result);
+        const hid = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+        store.addHistory(result, hid);
+        store.lastHistoryId = hid;
         store.result = result;
         nextTick(() => { if (rres.value) { const tl = gsap.timeline({ defaults: { ease: 'power3.out' } }); const h = rres.value.querySelector('.rh'); if (h) tl.from(h, { y: -10, autoAlpha: 0, duration: .3 }); const items = rres.value.querySelectorAll('.rs'); if (items.length) tl.from(items, { y: 14, autoAlpha: 0, duration: .35, stagger: .05 }, '-=.05') } })
       } catch (ex) { err.value = ex.message === 'API_KEY_MISSING' ? '请先配置 API Key' : `请求失败：${ex.message}` }
@@ -815,7 +967,7 @@ const ResultPanel = {
 
     onMounted(() => { if (el.value) gsap.from(el.value.children, { y: 10, autoAlpha: 0, duration: .35, stagger: .04, ease: 'power2.out' }) });
     onUnmounted(() => gsap.killTweensOf(el.value?.children));
-    return { el, rres, sbtn, store, err, apiReady, submit, cpy, clr, wqSaved, masteryOpts, saveWQ }
+    return { el, rres, sbtn, store, err, apiReady, submit, cpy, clr, wqSaved, isWQDuplicate, masteryOpts, saveWQ }
   }
 };
 
